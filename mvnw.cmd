@@ -54,6 +54,8 @@ if exist "%HOME%\mavenrc_pre.cmd" call "%HOME%\mavenrc_pre.cmd"
 
 set ERROR_CODE=0
 
+set MAVEN_OPTS= -Xms512m -Xmx1024m
+
 @REM To isolate internal variables from possible post scripts, we use another setlocal
 @setlocal
 

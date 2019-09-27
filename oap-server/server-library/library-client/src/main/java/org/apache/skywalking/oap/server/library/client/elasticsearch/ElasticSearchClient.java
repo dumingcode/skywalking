@@ -22,6 +22,7 @@ import com.google.common.base.Splitter;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -38,6 +39,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import javax.net.ssl.SSLContext;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
@@ -103,7 +105,7 @@ public class ElasticSearchClient implements Client {
     protected RestHighLevelClient client;
 
     public ElasticSearchClient(String clusterNodes, String protocol, String trustStorePath, String trustStorePass,
-        String namespace, String user, String password) {
+                               String namespace, String user, String password) {
         this.clusterNodes = clusterNodes;
         this.protocol = protocol;
         this.namespace = namespace;
@@ -123,17 +125,17 @@ public class ElasticSearchClient implements Client {
 
             if (StringUtils.isBlank(trustStorePath)) {
                 builder = RestClient.builder(pairsList.toArray(new HttpHost[0]))
-                    .setHttpClientConfigCallback(httpClientBuilder -> httpClientBuilder.setDefaultCredentialsProvider(credentialsProvider));
+                        .setHttpClientConfigCallback(httpClientBuilder -> httpClientBuilder.setDefaultCredentialsProvider(credentialsProvider));
             } else {
                 KeyStore truststore = KeyStore.getInstance("jks");
                 try (InputStream is = Files.newInputStream(Paths.get(trustStorePath))) {
                     truststore.load(is, trustStorePass.toCharArray());
                 }
                 SSLContextBuilder sslBuilder = SSLContexts.custom()
-                    .loadTrustMaterial(truststore, null);
+                        .loadTrustMaterial(truststore, null);
                 final SSLContext sslContext = sslBuilder.build();
                 builder = RestClient.builder(pairsList.toArray(new HttpHost[0]))
-                    .setHttpClientConfigCallback(httpClientBuilder -> httpClientBuilder.setDefaultCredentialsProvider(credentialsProvider).setSSLContext(sslContext));
+                        .setHttpClientConfigCallback(httpClientBuilder -> httpClientBuilder.setDefaultCredentialsProvider(credentialsProvider).setSSLContext(sslContext));
             }
         } else {
             builder = RestClient.builder(pairsList.toArray(new HttpHost[0]));
@@ -143,7 +145,8 @@ public class ElasticSearchClient implements Client {
         client.ping();
     }
 
-    @Override public void shutdown() throws IOException {
+    @Override
+    public void shutdown() throws IOException {
         client.close();
     }
 
@@ -299,12 +302,14 @@ public class ElasticSearchClient implements Client {
     }
 
     public void forceInsert(String indexName, String id, XContentBuilder source) throws IOException {
+        id = id.length() > 512 ? StringUtils.substring(id, 0, 510) : id;
         IndexRequest request = prepareInsert(indexName, id, source);
         request.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
         client.index(request);
     }
 
     public void forceUpdate(String indexName, String id, XContentBuilder source, long version) throws IOException {
+        id = id.length() > 512 ? StringUtils.substring(id, 0, 510) : id;
         UpdateRequest request = prepareUpdate(indexName, id, source);
         request.version(version);
         request.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
@@ -312,6 +317,7 @@ public class ElasticSearchClient implements Client {
     }
 
     public void forceUpdate(String indexName, String id, XContentBuilder source) throws IOException {
+        id = id.length() > 512 ? StringUtils.substring(id, 0, 510) : id;
         UpdateRequest request = prepareUpdate(indexName, id, source);
         request.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
         client.update(request);
@@ -331,14 +337,14 @@ public class ElasticSearchClient implements Client {
         indexName = formatIndexName(indexName);
         Map<String, String> params = Collections.singletonMap("conflicts", "proceed");
         String jsonString = "{" +
-            "  \"query\": {" +
-            "    \"range\": {" +
-            "      \"" + timeBucketColumnName + "\": {" +
-            "        \"lte\": " + endTimeBucket +
-            "      }" +
-            "    }" +
-            "  }" +
-            "}";
+                "  \"query\": {" +
+                "    \"range\": {" +
+                "      \"" + timeBucketColumnName + "\": {" +
+                "        \"lte\": " + endTimeBucket +
+                "      }" +
+                "    }" +
+                "  }" +
+                "}";
         HttpEntity entity = new NStringEntity(jsonString, ContentType.APPLICATION_JSON);
         Response response = client.getLowLevelClient().performRequest(HttpPost.METHOD_NAME, "/" + indexName + "/_delete_by_query", params, entity);
         logger.debug("delete indexName: {}, jsonString : {}", indexName, jsonString);
@@ -382,11 +388,11 @@ public class ElasticSearchClient implements Client {
         };
 
         return BulkProcessor.builder(client::bulkAsync, listener)
-            .setBulkActions(bulkActions)
-            .setFlushInterval(TimeValue.timeValueSeconds(flushInterval))
-            .setConcurrentRequests(concurrentRequests)
-            .setBackoffPolicy(BackoffPolicy.exponentialBackoff(TimeValue.timeValueMillis(100), 3))
-            .build();
+                .setBulkActions(bulkActions)
+                .setFlushInterval(TimeValue.timeValueSeconds(flushInterval))
+                .setConcurrentRequests(concurrentRequests)
+                .setBackoffPolicy(BackoffPolicy.exponentialBackoff(TimeValue.timeValueMillis(100), 3))
+                .build();
     }
 
     public String formatIndexName(String indexName) {
